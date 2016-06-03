@@ -1,0 +1,42 @@
+
+\documentclass[11pt]{article}
+\usepackage{natbib}
+
+
+\title{permuter: An R Package for Randomization Inference}
+\author{K. Ottoboni$^{1,*}$, J. Millman$^{2}$ and P.B. Stark$^1$}
+\begin{document}
+
+% Produce the title
+\maketitle
+% Brief abstract of the paper
+\abstract{
+Software packages for randomization inference are few and far between.
+This forces researchers either to rely on specialized stand-alone programs or to use classical statistical tests that may require implausible assumptions about their data-generating process.
+The absence of a flexible and comprehensive package for randomization inference is an obstacle for researchers from a wide range of disciplines who turn to R as a language for carrying out their data analysis.
+We present \texttt{permuter}, a package for randomization inference.
+We illustrate the program's capabilities with several examples:
+\begin{itemize}
+\item a randomized experiment comparing the student evaluations of teaching for male and female instructors \citep{macnell:article}
+\item a study of the association between salt consumption and mortality at the level of nations
+\item an assessment of inter-rater reliability for a series of labels assigned by multiple raters to video footage of children on the autism spectrum
+\end{itemize}
+
+We discuss future plans for \texttt{permuter} and the role of software development in Statistics.
+}
+
+
+\thispagestyle{empty}
+
+% References, if any. Remove this if there are no references.
+\bibliographystyle{apalike}
+\begin{thebibliography}{99}
+
+\bibitem[\protect\astroncite{MacNell et al.}{2014}]{macnell:article} MacNell, L. and Driscoll, A. and Hunt, A. N. (2014). What's in a Name: Exposing Gender Bias in Student Ratings of Teaching. \textit{Innovative Higher Education}, %\textbf{}, 
+1--13.
+
+
+\end{thebibliography}
+
+\end{document}
+
