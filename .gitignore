@@ -28,3 +28,7 @@
 *.nav
 *.snm
 *.vrb
+
+# Cached R files
+*cache
+*.Rhistory
