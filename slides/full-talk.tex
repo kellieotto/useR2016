@@ -101,8 +101,8 @@
 
 % Python style for highlighting
 \usepackage{listings}
-\newcommand\pythonstyle{\lstset{
-language=Python,
+\newcommand\rstyle{\lstset{
+language=R,
 %numbers=left,
 %numberstyle=\footnotesize,
 %numbersep=1em,
@@ -116,8 +116,8 @@ frame=l,
 tabsize=4,
 % Basic
 basicstyle=\ttfamily\scriptsize,
-otherkeywords={self},             % Add keywords here
-keywordstyle={\color{Keywords}\bfseries},
+otherkeywords={!,!=,~,$,*,\&,\%/\%,\%*\%,\%\%,<-,<<-},
+%keywordstyle={\color{Keywords}\bfseries},
 % Comments
 commentstyle=\color{Comments}\slshape,
 %% Strings
@@ -125,10 +125,11 @@ stringstyle=\color{Strings},
 morecomment=[s][\color{Strings}]{"""}{"""},
 morecomment=[s][\color{Strings}]{'''}{'''},
 % keywords
-morekeywords={import,from,class,def,for,while,if,is,in,elif,else,not,and,or,print,break,continue,return,True,False,None,access,as,,del,except,exec,finally,global,import,lambda,pass,print,raise,try,assert},
+morekeywords={},
 keywordstyle={\color{Keywords}\bfseries},
+deletekeywords={ts, mat, time, sample, response, stat},
 % additional keywords
-morekeywords={[2]@invariant,pylab,numpy,np,scipy},
+morekeywords={[2]@response, group, stratum, stat},
 keywordstyle={[2]\color{Decorators}\slshape},
 emph={self},
 emphstyle={\color{self}\slshape},
@@ -136,21 +137,17 @@ frame=tb,                         % Any extra options here
 showstringspaces=false            % 
 }}
 
-% Python environment
-\lstnewenvironment{python}[1][]
+% R environment
+\lstnewenvironment{rcode}[1][]
 {
-\pythonstyle
+\rstyle
 \lstset{#1}
 }
 {}
 
-% Python for external files
-\newcommand\pythonexternal[2][]{{
-\pythonstyle
-\lstinputlisting[#1]{#2}}}
 
-% Python for inline
-\newcommand\pythoninline[1]{{\pythonstyle\lstinline!#1!}}
+% R for inline
+\newcommand\rinline[1]{{\rstyle\lstinline!#1!}}
 
 
 
@@ -365,25 +362,30 @@ are equally likely. \\
 \begin{frame}[fragile]
 \frametitle{Code}
 \begin{center}
-\begin{python}
-# load packages
-import numpy as np
-from permute.data import macnell2014
-from permute.stratified import stratified_two_sample
+\begin{rcode}
+# Load data
+library(permuter)
+data(macnell)
 
-# initialize PRNG
-rs = np.random.RandomState(seed=1)
 
-# load the data
-ratings = macnell2014()
+# Calculate the observed test statistic
+tst_stat <- function(x) {
+  mean(x[macnell$taidgender == 0], na.rm = TRUE) -
+  mean(x[macnell$taidgender == 1], na.rm = TRUE)
+  }
+observed <- tst_stat(macnell$overall)
 
 # Ratings vs reported instructor gender (difference in means)
-(p, t) = stratified_two_sample(group=ratings.tagender,
-                               response=ratings.overall,
-                               condition=ratings.taidgender,
-                               alternative="two-sided",
+distr <- stratified_two_sample(response=macnell$overall, 
+                               group=macnell$taidgender, 
+                               stratum=macnell$tagender,
                                stat="mean", reps=10**5)
-\end{python}
+
+
+# Calculate two-sided p-value
+p <- t2p(observed, distr, alternative = "two-sided")
+
+\end{rcode}
 \end{center}
 \end{frame}
 
@@ -453,28 +455,30 @@ $\implies$ Treat all ratings from a student as a vector and calibrate the distri
 
 \begin{frame}[fragile]
 \frametitle{Omnibus Test}
-\begin{python}
+\begin{rcode}
 # Initialize placeholders
-ind = 0
-test_distr = np.zeros( (10**5, len(categories)) )
-pvalues = np.zeros( len(categories) )
+categories <- colnames(macnell)[2:16]
+test_distr <- matrix(0, nrow = 10**5, ncol = length(categories))
+pvalues <- rep(0, length(categories))
+colnames(test_distr) <- names(pvalues) <- categories
 
 # Loop over rating categories
-for col in categories:
-    (p, t, distr) = stratified_two_sample(
-                        group=ratings.tagender,
-                        response=ratings[col],
-                        condition=ratings.taidgender,
-                        alternative="two-sided",
-                        stat="mean", seed = seed,
-                        reps = 10**5, keep_dist = True)
-    ind += 1
-    test_distr[:,ind] = distr; pvalues[ind] = p
- 
+for(col in categories){
+  set.seed(678)
+  observed <- tst_stat(macnell[ ,col])
+  distr <- stratified_two_sample(response=macnell[ ,col], 
+                                 group=macnell$taidgender, 
+                                 stratum=macnell$tagender,
+                                 stat="mean", reps=10**5)
+  test_distr[, col] <- distr
+  pvalues[col] <- t2p(observed, distr, alternative = "two-sided")
+}
+
 # NPC 
-omnibus_pvalue = npc(pvalues, test_distr, combine="fisher", 
-                         alternatives="two-sided")
-\end{python}
+omnibus_pvalue <- npc(pvalues, test_distr, combine="fisher", 
+                     alternatives="two-sided")
+
+\end{rcode}
 \end{frame}
 
 \frame{
@@ -627,42 +631,50 @@ If tags are assigned completely at random, conditional on the number of items ea
 
 \begin{frame}[fragile]
 \frametitle{Code}
-\begin{python}
-from permute.data import nsgk
-from permute.irr import simulate_ts_dist, simulate_npc_dist
+\begin{rcode}
+# NSGK example
 
-# load data, set video sizes
-x = nsgk()
-time_stamps = np.array([36, 32, 35, 37, 31, 35, 40, 32])
+library(permuter)
+library(dplyr)
+library(ggplot2)
 
-# Empty lists to store distrs and statistics for each video
-d = []; tst = [] ; vid_temp = []
+data(nsgk)
+time_stamps <- c(36, 32, 35, 37, 31, 35, 40, 32)
 
-# Run analysis for a single category i
-for j in range(len(x[i])):  # loop over videos
-        res = simulate_ts_dist(x[i][j], keep_dist=True)
-        d.append(res["dist"])
-        tst.append(res["obs_ts"])
-        vid_temp.append(res["pvalue"])
+# nsgk_mat is a list of lists:
+# first level indexes the tag
+# second level indexes the video
+# For how to obtain nsgk_mat from data(nsgk), see the vignette nsgk.Rmd
 
-# Combine permutation distributions for each video
-perm_distr = np.asarray(d).transpose()
-simulate_npc_dist(perm_distr, size=time_stamps,
-                      obs_ts=tst, keep_dist=False)
-\end{python}
+
+# Example of how we analyze a single tag.
+tag1 <- nsgk_mat[[1]]
+
+# Find the distribution of the IRR test statistic for each video
+video_specific_results <- lapply(tag1, function(x){
+  res <- irr_ts_distribution(x, num_perm = 1000,    
+                            keep_dist = TRUE, seed = 101)
+})
+tag_distribution <- sapply(video_specific_results, function(x) x$dist)
+tag_pvalues      <- sapply(video_specific_results, function(x) x$pvalue)
+
+# Combine across videos with NPC
+tag_npc_res <- irr_npc_distribution(tag_distribution, size = time_stamps, pvalues = tag_pvalues)
+
+\end{rcode}
 
 \end{frame}
 
 \frame{
 \frametitle{Results}
 
-\begin{itemize}
+\todo{\begin{itemize}
 %\item 50 tags were never used
 \item 60 tags had $P < 0.05$
 \item Statistical vs practical significance -- consult domain scientists 
 \item Is there a more useful summary statistic than $\rho_s$?
 \end{itemize}
-
+}
 \begin{figure}[htbp]
 \begin{center}
 \includegraphics[height=0.7\textheight]{fig/nsgk}
