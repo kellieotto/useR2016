@@ -266,6 +266,15 @@ R has several packages for randomization inference.
 
 }
 
+
+\frame{
+\frametitle{Teaching Statistics with Permutation Tests}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{fig/DS8.jpg} \\
+Data Science 8, Spring 2016 at UC Berkeley
+\end{center}
+}
+
 \frame{
 \todo{flesh out intro!!}
 }
@@ -285,27 +294,24 @@ R has several packages for randomization inference.
   \item Make hiring, firing, and promotion decisions  
   \end{itemize}
   \vfill
-Are SET a valid measure of teaching effectiveness?
+Are SET a valid measure of teaching effectiveness? 
 \end{center}
 }
 
 
-\frame
-{
-  \frametitle{Teaching evaluations}
-  \begin{center}
-  \Huge{No!}
-  \end{center}
-\Large
+\frame{
+\frametitle{Teaching evaluations}
+\large
 
-We reanalyzed data from \cite{macnell2014whats}.
+In \citet{boring2016teaching}, we reanalyzed data from \cite{macnell2014whats}.
+\vspace{10pt}
 \begin{center}
 \begin{itemize}
-\itemsep 15pt
+\itemsep 10pt
 \item Students were randomized to 4 online sections of a course.
-\item In two sections, the TAs swapped identities.
-%\item Female-identified TA was rated lower on average in all categories
-\item Was the TA who identified as female rated lower on average?
+\item In two sections, the instructors swapped identities.
+%\item Female-identified instructor was rated lower on average in all categories
+\item Was the instructor who identified as female rated lower on average?
 \end{itemize}
 \end{center}
 }
@@ -333,17 +339,14 @@ $$r_{ij\text{male}} = r_{ij\text{female}}.$$
 
 \frame{
 \frametitle{Randomization}
-%\todo{redo this slide}
 
 Conceptually, there are two levels of randomization:
 
 \begin{enumerate}
-\item $N_m$ students are randomly assigned to the male instructor, and\\
+\item $N_m$ students are randomly assigned to the male instructor, and
 the remaining $N_f$ get the female instructor.
 \item Of the $N_j$ assigned to instructor $j$, 
 $N_{jm}$ are told that the instructor is male, for $j = 1, 2$.
-%\item $N_{mm}$ of the $N_{m}$ students and $N_{fm}$ of the $N_f$ students are told that their TA is male
-% \item issue of nonresponse
 \end{enumerate}
 \vspace{10pt}
 
@@ -351,12 +354,16 @@ All ${{N_m}\choose{N_{mm}} }\times{ {N_f}\choose{N_{fm}}}$ assignments of studen
 are equally likely. \\
 \vspace{10pt}
 
-This determines the conditional null distribution of \textbf{any statistic}.
-e use the difference in mean ratings.
+\begin{block}{Stratified two-sample test}
+\begin{itemize}
+\item For each instructor, permute perceived gender assignments
+\item Use difference in mean ratings for female-identified minus male-identified
+\end{itemize}
+\end{block}
 }
 
 \begin{frame}[fragile]
-\frametitle{Stratified two-sample test}
+\frametitle{Code}
 \begin{center}
 \begin{python}
 # load packages
@@ -371,9 +378,9 @@ rs = np.random.RandomState(seed=1)
 ratings = macnell2014()
 
 # Ratings vs reported instructor gender (difference in means)
-(p, t) = stratified_two_sample(group=ratings.taidgender,
+(p, t) = stratified_two_sample(group=ratings.tagender,
                                response=ratings.overall,
-                               condition=ratings.tagender,
+                               condition=ratings.taidgender,
                                alternative="two-sided",
                                stat="mean", reps=10**5)
 \end{python}
@@ -384,7 +391,6 @@ ratings = macnell2014()
 \frame
 {
   \frametitle{Results}
-  \todo{update p-values}
 In all categories, the male-identified instructor was rated higher.
 \begin{table}
 \begin{tabular}{r|crr}
@@ -392,19 +398,17 @@ In all categories, the male-identified instructor was rated higher.
 \hline
 Overall & 0.47 & 0.12 & 0.128\\
 Caring & 0.52 & 0.10 & 0.071\\
-%Clear & 0.41 & 0.29 & NA \\
-%Communicate & 0.57 & 0.07 & NA \\
-Consistent & 0.47 & 0.21 & 0.045 \\ % The test stat didn't match Philip's talk...go back to notebook and paper
+Consistent & 0.47 & 0.21 & \textcolor{red}{0.045} \\ 
 Enthusiastic & 0.57 & 0.06 & 0.112 \\
-Fair & 0.76 & 0.01 & 0.188 \\
+Fair & 0.76 & \textcolor{red}{0.01} & 0.188 \\
 Feedback & 0.47 & 0.16 & 0.054 \\
-Helpful & 0.46 & 0.17 & 0.049 \\
-Knowledgeable & 0.35 & 0.29 & 0.038 \\
-Praise & 0.67 & 0.01 & 0.153 \\
+Helpful & 0.46 & 0.17 & \textcolor{red}{0.049} \\
+Knowledgeable & 0.35 & 0.29 & \textcolor{red}{0.038} \\
+Praise & 0.67 & \textcolor{red}{0.01} & 0.153 \\
 Professional & 0.61 & 0.07 & 0.124 \\
-Prompt & 0.80 & 0.01 & 0.191 \\
+Prompt & 0.80 & \textcolor{red}{0.01} & 0.191 \\
 Respectful & 0.61 & 0.06 & 0.124 \\
-Responsive & 0.22 & 0.48 & 0.013
+Responsive & 0.22 & 0.48 & \textcolor{red}{0.013}
 \end{tabular}
 \end{table}
 
@@ -417,7 +421,7 @@ Responsive & 0.22 & 0.48 & 0.013
 \textbf{Nonparametric combination of tests (NPC):} combine individual p-values into a single omnibus test when there are many responses \\
 \vspace{10pt}
 
-Test whether \textbf{all null} hypotheses are true or \textbf{at least one alternative} is true \\
+Test whether to accept \textbf{all null} hypotheses or reject \textbf{at least one alternative} \\
 \vspace{10pt}
 
 \begin{block}{Fisher's combining function}
@@ -431,18 +435,16 @@ If $\{ P_j\}_{j=1}^J$ are independent and all nulls are true, then $X^2 \sim \ch
 \frame{
 \frametitle{Omnibus Test}
 Ratings by the same student for different categories are \textbf{dependent}.\\
-\vspace{20pt}
-
-
-$\implies$ Calibrate the distribution of $X^2$ using the permutation distributions of each individual statistic.
 \vspace{10pt}
 
-\todo{check that this is legible}
+$\implies$ Treat all ratings from a student as a vector and calibrate the distribution of $X^2$ using the this permutation distribution.
+\vspace{10pt}
+
 \begin{block}{NPC Permutation Procedure}
 \begin{enumerate}
-\item Calculate the vector of observed values of test statistics (use the \textbf{same permutation} of section memberships to compute all statistics)
-\item Apply the combining function to get a single combined statistic for the permutation.
-\item Repeat a large number $B$ times to find the permutation distribution of the combined statistic.
+\item Calculate the vector of test statistics (use the \textbf{same permutation} of section memberships to compute all statistics), repeat a large number $B$ times
+\item Compute the p-value for each individual variable in each permutation relative to the other values in the distribution
+\item Apply the combining function to each vector of p-values.
 \end{enumerate}
 \end{block}
 }
@@ -451,52 +453,51 @@ $\implies$ Calibrate the distribution of $X^2$ using the permutation distributio
 
 \begin{frame}[fragile]
 \frametitle{Omnibus Test}
-%\begin{python}
-%# Initialize placeholders
-%ind = 0
-%test_distr = np.zeros( (10**5, len(categories)) )
-%pvalues = np.zeros( len(categories) )
-%
-%# Loop over rating categories
-%for col in categories:
-%    (p, t, distr) = stratified_two_sample(
-%                        group=ratings.taidgender,
-%                        response=ratings[col],
-%                        condition=ratings.tagender,
-%                        alternative="two-sided",
-%                        stat="mean", seed = seed,
-%                        reps = 10**5, keep_dist = True)
-%    ind += 1
-%    test_distr[:,ind] = distr; pvalues[ind] = p
-% 
-%# NPC 
-%omnibus_pvalue = npc(pvalues, test_distr, combine="fisher", 
-%                         alternatives="two-sided")
-%\end{python}
+\begin{python}
+# Initialize placeholders
+ind = 0
+test_distr = np.zeros( (10**5, len(categories)) )
+pvalues = np.zeros( len(categories) )
+
+# Loop over rating categories
+for col in categories:
+    (p, t, distr) = stratified_two_sample(
+                        group=ratings.tagender,
+                        response=ratings[col],
+                        condition=ratings.taidgender,
+                        alternative="two-sided",
+                        stat="mean", seed = seed,
+                        reps = 10**5, keep_dist = True)
+    ind += 1
+    test_distr[:,ind] = distr; pvalues[ind] = p
+ 
+# NPC 
+omnibus_pvalue = npc(pvalues, test_distr, combine="fisher", 
+                         alternatives="two-sided")
+\end{python}
 \end{frame}
 
 \frame{
 \frametitle{Conclusions}
-\textbf{Omnibus test:} $P = 0$
-
+\large
+\textbf{Omnibus test:} $P = 0$ \\
 \vspace{20pt}
-\begin{itemize}
-\itemsep10pt
-\item Reject the null hypothesis that there is no difference in ratings for any category
-\item The male-identified instructor was rated significantly higher than the female-identified instructor on several dimensions, \textbf{even on objective measures} such as how promptly assignments were returned
-\item SET measure something other than teaching effectiveness
-\end{itemize}
+
+Reject the null hypothesis that there is no difference in ratings for any category. \\
+\vspace{10pt}
+$\implies$ SET measure something other than teaching effectiveness.
 }
 
 
 \subsection[Inter-rater reliability]{Inter-rater reliability}
 \frame{
-\frametitle{NSGK Data}
+\frametitle{Inter-rater reliability test}
+\large
 \begin{itemize}
 \itemsep10pt
 \item Naomi Stark and Gilbert Kliman (NSGK) collected videos of therapy sessions with children on the autism spectrum
 \item A team of trained raters watched and tagged each 30-second interval of video from a collection of 183 clinically relevant tags
-\item Is tagging of therapist-patient interactions reliable (\cite{millman2016case})? Which tags do raters agree on?
+\item Is tagging of therapist-patient interactions reliable (\cite{millman2016case})? 
 \end{itemize}
 }
 
@@ -523,7 +524,7 @@ There are four dimensions. Can we simplify?
   \hline
   8 videos  & $S$ strata   \\
   \hline
-  $\sim$40 segments/videos  & $N_s$ items/strata   \\
+  $\sim$35 segments/video  & $N_s$ items/stratum   \\
   \hline
   10 raters  & $R$ raters  \\
   \hline
@@ -534,10 +535,15 @@ There are four dimensions. Can we simplify?
 
 \frame{
 \frametitle{Inter-rater reliability test}
-Is agreement within columns better than expected by chance?
+We need
+\begin{itemize}
+\item a test statistic for concordance
+\item a chance model
+\end{itemize}
+
 \begin{figure}
 \centering
-\includegraphics[height=0.75\textheight]{fig/irr/perm1}
+\includegraphics[height=0.65\textheight]{fig/irr/perm1}
 \end{figure}
 }
 
@@ -562,89 +568,88 @@ The test statistic within stratum $s$ is
 
 }
 
-
-\frame{
-\frametitle{Inter-rater reliability test}
-Now we have a measure of concordance. What is the chance model?
-\begin{figure}
-\centering
-\includegraphics[height=0.75\textheight]{fig/irr/perm1}
-\end{figure}
-}
+%
+%\frame{
+%\frametitle{Inter-rater reliability test}
+%Now we have a measure of concordance. 
+%\begin{figure}
+%\centering
+%\includegraphics[height=0.75\textheight]{fig/irr/perm1}
+%\end{figure}
+%}
 
 \frame{
 \frametitle{Permutation test}
-If tags are assigned completely at random, then
+If tags are assigned completely at random, conditional on the number of items each rater tagged, then
 
 \begin{itemize}
-\item any of $2^{N_s}$ assignments of tags are equally likely for each rater.
+\item all possible permutations of tags are likely for an individual rater
 \item raters assign tags independently of each other
+%\item \textbf{Implied randomization:} Permute tags within rows, independently across rows and across strata.
 \end{itemize}
 
-\vspace{10pt}
-Each rater may have different ``propensity'' to assign a tag \\
+
+\begin{block}{IRR Permutation Test}
 \begin{itemize}
-\item \textbf{Solution:}  condition on the number of items that a rater tagged.
-\item \textbf{Implied randomization:} Permute tags within rows, independently across rows and across strata.
+\item Compute $\rho_s$ for $s = 1, \dots, S$ for the observed data
+\item Permute tags within rows, independently across rows and across strata, to get the permutation distributions
+\item For the observed and permutation $\rho_s$ values, find the corresponding p-value $P_s$ for each permutation
+\item The NPC test statistic is $T = -\sum_{s=1}^S \frac{P_s}{\sqrt{N_s}}$.
 \end{itemize}
-
-\vspace{10pt}
-For overall test of tag, combine using NPC:
-
-$$T = -\sum_{s=1}^S \frac{P_s}{\sqrt{N_s}}$$
+\end{block}
 }
 
-\frame{
-\frametitle{Inter-rater reliability test}
-Observed tags for stratum $s$
-\begin{figure}
-\centering
-\includegraphics[height=0.75\textheight]{fig/irr/perm1}
-\end{figure}
-}\frame{
-\frametitle{Inter-rater reliability test}
-Equally likely tags for stratum $s$, under the null
-\begin{figure}
-\centering
-\includegraphics[height=0.75\textheight]{fig/irr/perm2}
-\end{figure}
-}
-\frame{
-\frametitle{Inter-rater reliability test}
-Equally likely tags for stratum $s$, under the null
-\begin{figure}
-\centering
-\includegraphics[height=0.75\textheight]{fig/irr/perm3}
-\end{figure}
-}
+%\frame{
+%\frametitle{Inter-rater reliability test}
+%Observed tags for stratum $s$
+%\begin{figure}
+%\centering
+%\includegraphics[height=0.75\textheight]{fig/irr/perm1}
+%\end{figure}
+%}\frame{
+%\frametitle{Inter-rater reliability test}
+%Equally likely tags for stratum $s$, under the null
+%\begin{figure}
+%\centering
+%\includegraphics[height=0.75\textheight]{fig/irr/perm2}
+%\end{figure}
+%}
+%\frame{
+%\frametitle{Inter-rater reliability test}
+%Equally likely tags for stratum $s$, under the null
+%\begin{figure}
+%\centering
+%\includegraphics[height=0.75\textheight]{fig/irr/perm3}
+%\end{figure}
+%}
 
 
 
 \begin{frame}[fragile]
 \frametitle{Code}
-%\begin{python}
-%from permute.data import nsgk
-%from permute.irr import simulate_ts_dist, simulate_npc_dist
-%
-%# load data, set video sizes
-%x = nsgk()
-%time_stamps = np.array([36, 32, 35, 37, 31, 35, 40, 32])
-%
-%# Empty lists to store distrs and statistics for each video
-%d = []; tst = [] ; vid_temp = []
-%
-%# Run analysis for a single category i
-%for j in range(len(x[i])):  # loop over videos
-%        res = simulate_ts_dist(x[i][j], keep_dist=True)
-%        d.append(res["dist"])
-%        tst.append(res["obs_ts"])
-%        vid_temp.append(res["pvalue"])
-%
-%# Combine permutation distributions for each video
-%perm_distr = np.asarray(d).transpose()
-%simulate_npc_dist(perm_distr, size=time_stamps,
-%                      obs_ts=tst, keep_dist=False)
-%\end{python}
+\begin{python}
+from permute.data import nsgk
+from permute.irr import simulate_ts_dist, simulate_npc_dist
+
+# load data, set video sizes
+x = nsgk()
+time_stamps = np.array([36, 32, 35, 37, 31, 35, 40, 32])
+
+# Empty lists to store distrs and statistics for each video
+d = []; tst = [] ; vid_temp = []
+
+# Run analysis for a single category i
+for j in range(len(x[i])):  # loop over videos
+        res = simulate_ts_dist(x[i][j], keep_dist=True)
+        d.append(res["dist"])
+        tst.append(res["obs_ts"])
+        vid_temp.append(res["pvalue"])
+
+# Combine permutation distributions for each video
+perm_distr = np.asarray(d).transpose()
+simulate_npc_dist(perm_distr, size=time_stamps,
+                      obs_ts=tst, keep_dist=False)
+\end{python}
 
 \end{frame}
 
@@ -660,7 +665,7 @@ Equally likely tags for stratum $s$, under the null
 
 \begin{figure}[htbp]
 \begin{center}
-%\includegraphics[height=0.7\textheight]{fig/nsgk}
+\includegraphics[height=0.7\textheight]{fig/nsgk}
 \end{center}
 \end{figure}
 
@@ -671,7 +676,8 @@ Equally likely tags for stratum $s$, under the null
 \section[Software and Statistics]{The role of software development in Statistics}
 
 \frame{
-\frametitle{Reproducibility}
+\frametitle{Software and Statistics}
+\Large
 Why should Statisticians worry about writing software?
 
 \begin{itemize}
@@ -686,57 +692,50 @@ Why should Statisticians worry about writing software?
 \includegraphics[width=\textwidth]{fig/repro.png}
 }
 
-\frame{
-\frametitle{Ethics}
-\textbf{Much of the reproducibility crisis can be traced back to bad statistics.} 
-
-\begin{itemize}
-\item Publication bias: positive findings are more likely to get published
-\item P-hacking and the garden of forking paths (\cite{gelman2013garden})
-\item Inappropriate statistical tests (Randomization inference may help here)
-\end{itemize}
-
-It is our responsibility to make it easy for researchers to do the right statistics.
-}
+%\frame{
+%\frametitle{Ethics}
+%\textbf{Much of the reproducibility crisis can be traced back to bad statistics.} 
+%
+%\begin{itemize}
+%\item Publication bias: positive findings are more likely to get published
+%\item P-hacking and the garden of forking paths (\cite{gelman2013garden})
+%\item Inappropriate statistical tests (Randomization inference may help here)
+%\end{itemize}
+%\vspace{15pt}
+%\large We must make it easy for researchers to do the right statistics.
+%}
 
 \frame{
 \frametitle{Impact}
-Let us own data science (\cite{yu2014datascience}).
-\vspace{10pt}
+\large
 
-If we want to 
+\begin{block}{Bin~\cite{yu2014datascience}}
+Let us own data science.
+\end{block}
+
+
+\vspace{20pt}
+\textbf{Statisticians} have to build the tools to
 \begin{itemize}
-\itemsep10pt
+\itemsep5pt
 \item facilitate reproducible scientific research,
 \item enable people to use the methods we develop (correctly!), and
-\item influence the way people do statistics more broadly, 
+\item impact the way people think about data.
 \end{itemize}
-then \textbf{we} have to build the tools.
 }
 
 \frame{
-\frametitle{Download \texttt{permuter}!}
+\frametitle{Download \texttt{permute}!}
 \begin{figure}[htbp]
 \begin{center}
-%\includegraphics[width=\textwidth]{fig/github/permute}
+\includegraphics[width=\textwidth]{fig/github/permute}
 \end{center}
 \end{figure}
 
 
-\url{https://github.com/statlab/permuter}
+\url{https://github.com/statlab/permute}
 }
 
-
-\frame{
-\frametitle{Collaborators}
-\begin{figure}[htbp]
-\begin{center}
-\includegraphics[width = 0.4\textwidth, valign=t]{fig/github/jarrodmillman} 
-\includegraphics[width = 0.4\textwidth, valign=t]{fig/github/pbstark} 
-\end{center}
-\end{figure}
-
-}
 
 \begin{frame}
 \frametitle{References}
