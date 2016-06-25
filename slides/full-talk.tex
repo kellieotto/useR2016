@@ -125,11 +125,13 @@ stringstyle=\color{Strings},
 morecomment=[s][\color{Strings}]{"""}{"""},
 morecomment=[s][\color{Strings}]{'''}{'''},
 % keywords
-morekeywords={},
+alsoletter={_, .},
+morekeywords={set.seed},
 keywordstyle={\color{Keywords}\bfseries},
-deletekeywords={ts, mat, time, sample, response, stat},
+deletekeywords={ts, mat, time, sample, response, stat, col, by},
 % additional keywords
-morekeywords={[2]@response, group, stratum, stat},
+morekeywords={[2]@response, group, stratum, stat, response, reps, 
+alternative, alternatives, combine, {keep_dist}, seed, size, pvalues, keep_dist},
 keywordstyle={[2]\color{Decorators}\slshape},
 emph={self},
 emphstyle={\color{self}\slshape},
@@ -210,6 +212,9 @@ showstringspaces=false            %
 \end{columns}
 }
 
+
+
+
 \AtBeginSection[]
 {
    \begin{frame}
@@ -228,10 +233,11 @@ showstringspaces=false            %
 
 \begin{itemize}
 \itemsep15pt
-\item \citet{fisher_design_1935} introduced permutation tests for randomized experiments
-\item Rely on assumptions about randomization or exchangeability, rather than parametric assumptions, IID sampling, etc.
+\item \citet{fisher_design_1935} introduced permutation tests for the analysis of randomized experiments
+\item They rely on assumptions about randomization or exchangeabilityto generate the distribution of a test statistic under the null hypothesis
+\item They were largely replaced by parametric hypothesis tests because they were computationally infeasible, but are making a comeback
 \end{itemize}
-\vspace{20pt}
+\vspace{10pt}
 \begin{block}{James \citet{bradley1968distribution}}
 ``[a] corresponding parametric test is valid only to the extent that it results in the same statistical decision [as the randomization test].'' 
 \end{block}
@@ -253,10 +259,10 @@ R has several packages for randomization inference.
 {\tiny\textit{``The RItools package implements useful functions for implementing randomization inference based statistical tests. The package provides tools for testing balance of observed covariates in observational studies using the methodology of:...The package also provides outcome analysis of simple or block randomized trials (or matched observational studies) based on user defined models and test statistics.''}\par}
 \item \texttt{coin} %by Torsten Hothorn, Kurt Hornik, Mark A. van de Wiel, and Achim Zeileis
 
-{\tiny\textit{The R package coin implements a unified approach to permutation tests providing a huge class of independence tests for nominal, ordered, numeric, and censored data as well as multivariate data at mixed scales. Based on a rich and flexible conceptual framework that embeds different permutation test procedures into a common theory, a computational framework is established in coin that likewise embeds the corresponding R functionality in a common S4 class structure with associated generic functions.}\par}
+{\tiny\textit{``The R package coin implements a unified approach to permutation tests providing a huge class of independence tests for nominal, ordered, numeric, and censored data as well as multivariate data at mixed scales. Based on a rich and flexible conceptual framework that embeds different permutation test procedures into a common theory, a computational framework is established in coin that likewise embeds the corresponding R functionality in a common S4 class structure with associated generic functions.''}\par}
 \item \texttt{perm} %by Michael Fay
 
-{\tiny\textit{The package has three main functions, to perform linear permutation tests. These tests are tests where the test statistic is the sum of the product of a covariate (usually group indicator) and the scores.}\par}
+{\tiny\textit{``The package has three main functions, to perform linear permutation tests. These tests are tests where the test statistic is the sum of the product of a covariate (usually group indicator) and the scores.''}\par}
 \end{itemize}
 
 \end{multicols}
@@ -273,8 +279,22 @@ Data Science 8, Spring 2016 at UC Berkeley
 }
 
 \frame{
-\todo{flesh out intro!!}
+\frametitle{Teaching Statistics with Permutation Tests}
+\textbf{Goals for \texttt{permuter}:}\\
+
+\begin{itemize}
+\itemsep 15pt
+\item Create a comprehensive package for permutation tests\\
+\begin{itemize}
+\itemsep 5pt
+\item Building blocks of permutation tests
+\item Transparent, not a black box, to facilitate understanding
+\end{itemize}
+\item Write code with algorithms and computation in mind
+\item Compile examples and case studies alongside the package
+\end{itemize}
 }
+
 
 \section[Examples]{Examples}
 \subsection[Teaching evaluations]{Gender bias in teaching evaluations}
@@ -368,18 +388,18 @@ library(permuter)
 data(macnell)
 
 
-# Calculate the observed test statistic
-tst_stat <- function(x) {
+# Calculate the observed test statistic (difference in means)
+tst_statistic <- function(x) {
   mean(x[macnell$taidgender == 0], na.rm = TRUE) -
   mean(x[macnell$taidgender == 1], na.rm = TRUE)
   }
-observed <- tst_stat(macnell$overall)
+observed <- tst_statistic(macnell$overall)
 
-# Ratings vs reported instructor gender (difference in means)
-distr <- stratified_two_sample(response=macnell$overall, 
-                               group=macnell$taidgender, 
-                               stratum=macnell$tagender,
-                               stat="mean", reps=10**5)
+# Test overall ratings vs reported instructor gender
+distr <- stratified_two_sample(response = macnell$overall, 
+                               group = macnell$taidgender, 
+                               stratum = macnell$tagender,
+                               stat = "mean", reps = 1e5)
 
 
 # Calculate two-sided p-value
@@ -458,25 +478,25 @@ $\implies$ Treat all ratings from a student as a vector and calibrate the distri
 \begin{rcode}
 # Initialize placeholders
 categories <- colnames(macnell)[2:16]
-test_distr <- matrix(0, nrow = 10**5, ncol = length(categories))
-pvalues <- rep(0, length(categories))
-colnames(test_distr) <- names(pvalues) <- categories
+test_distr <- matrix(0, nrow = 1e5, ncol = length(categories))
+pvals <- rep(0, length(categories))
+colnames(test_distr) <- names(pvals) <- categories
 
 # Loop over rating categories
 for(col in categories){
   set.seed(678)
-  observed <- tst_stat(macnell[ ,col])
-  distr <- stratified_two_sample(response=macnell[ ,col], 
-                                 group=macnell$taidgender, 
-                                 stratum=macnell$tagender,
-                                 stat="mean", reps=10**5)
-  test_distr[, col] <- distr
-  pvalues[col] <- t2p(observed, distr, alternative = "two-sided")
+  observed <- tst_statistic(macnell[ ,col])
+  distr <- stratified_two_sample(response = macnell[ ,col], 
+                                 group = macnell$taidgender, 
+                                 stratum = macnell$tagender,
+                                 stat = "mean", reps = 1e5)
+  test_distr[ ,col] <- distr
+  pvals[col] <- t2p(observed, distr, alternative = "two-sided")
 }
 
 # NPC 
-omnibus_pvalue <- npc(pvalues, test_distr, combine="fisher", 
-                     alternatives="two-sided")
+omnibus_pvalue <- npc(pvals, test_distr, combine = "fisher", 
+                     alternatives = "two-sided")
 
 \end{rcode}
 \end{frame}
@@ -572,16 +592,6 @@ The test statistic within stratum $s$ is
 
 }
 
-%
-%\frame{
-%\frametitle{Inter-rater reliability test}
-%Now we have a measure of concordance. 
-%\begin{figure}
-%\centering
-%\includegraphics[height=0.75\textheight]{fig/irr/perm1}
-%\end{figure}
-%}
-
 \frame{
 \frametitle{Permutation test}
 If tags are assigned completely at random, conditional on the number of items each rater tagged, then
@@ -589,7 +599,6 @@ If tags are assigned completely at random, conditional on the number of items ea
 \begin{itemize}
 \item all possible permutations of tags are likely for an individual rater
 \item raters assign tags independently of each other
-%\item \textbf{Implied randomization:} Permute tags within rows, independently across rows and across strata.
 \end{itemize}
 
 
@@ -603,63 +612,32 @@ If tags are assigned completely at random, conditional on the number of items ea
 \end{block}
 }
 
-%\frame{
-%\frametitle{Inter-rater reliability test}
-%Observed tags for stratum $s$
-%\begin{figure}
-%\centering
-%\includegraphics[height=0.75\textheight]{fig/irr/perm1}
-%\end{figure}
-%}\frame{
-%\frametitle{Inter-rater reliability test}
-%Equally likely tags for stratum $s$, under the null
-%\begin{figure}
-%\centering
-%\includegraphics[height=0.75\textheight]{fig/irr/perm2}
-%\end{figure}
-%}
-%\frame{
-%\frametitle{Inter-rater reliability test}
-%Equally likely tags for stratum $s$, under the null
-%\begin{figure}
-%\centering
-%\includegraphics[height=0.75\textheight]{fig/irr/perm3}
-%\end{figure}
-%}
-
-
 
 \begin{frame}[fragile]
 \frametitle{Code}
 \begin{rcode}
-# NSGK example
-
 library(permuter)
-library(dplyr)
-library(ggplot2)
-
 data(nsgk)
 time_stamps <- c(36, 32, 35, 37, 31, 35, 40, 32)
 
 # nsgk_mat is a list of lists:
-# first level indexes the tag
-# second level indexes the video
-# For how to obtain nsgk_mat from data(nsgk), see the vignette nsgk.Rmd
-
+# First level indexes the tag, second level indexes the video
+# See the vignette nsgk.Rmd for details data(nsgk) --> nsgk_mat 
 
 # Example of how we analyze a single tag.
 tag1 <- nsgk_mat[[1]]
 
 # Find the distribution of the IRR test statistic for each video
-video_specific_results <- lapply(tag1, function(x){
-  res <- irr_ts_distribution(x, num_perm = 1000,    
-                            keep_dist = TRUE, seed = 101)
-})
-tag_distribution <- sapply(video_specific_results, function(x) x$dist)
-tag_pvalues      <- sapply(video_specific_results, function(x) x$pvalue)
+results_by_video <- lapply(tag1, function(x){
+    res <- irr_ts_distribution(x, reps = 1000, keep_dist = TRUE, 
+                               seed = 101)
+    })
+tag_distr    <- sapply(results_by_video, function(x) x$dist)
+tag_pvals  <- sapply(results_by_video, function(x) x$pvalue)
 
 # Combine across videos with NPC
-tag_npc_res <- irr_npc_distribution(tag_distribution, size = time_stamps, pvalues = tag_pvalues)
+tag_npc_res <- irr_npc_distribution(tag_distribution, 
+                  size = time_stamps, pvalues = tag_pvals)
 
 \end{rcode}
 
@@ -668,13 +646,11 @@ tag_npc_res <- irr_npc_distribution(tag_distribution, size = time_stamps, pvalue
 \frame{
 \frametitle{Results}
 
-\todo{\begin{itemize}
-%\item 50 tags were never used
-\item 60 tags had $P < 0.05$
+\begin{itemize}
+\item 93 tags had $P < 0.05$
 \item Statistical vs practical significance -- consult domain scientists 
-\item Is there a more useful summary statistic than $\rho_s$?
 \end{itemize}
-}
+
 \begin{figure}[htbp]
 \begin{center}
 \includegraphics[height=0.7\textheight]{fig/nsgk}
@@ -736,18 +712,21 @@ Let us own data science.
 \end{itemize}
 }
 
+
+
 \frame{
-\frametitle{Download \texttt{permute}!}
+\frametitle{Collaborators}
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=\textwidth]{fig/github/permute}
+\includegraphics[width = 0.3\textwidth, valign=t]{fig/github/jarrodmillman} 
+\includegraphics[width = 0.3\textwidth, valign=t]{fig/github/pbstark} 
 \end{center}
 \end{figure}
+\vspace{15pt}
+\url{https://github.com/statlab/permuter}
 
 
-\url{https://github.com/statlab/permute}
 }
-
 
 \begin{frame}
 \frametitle{References}
